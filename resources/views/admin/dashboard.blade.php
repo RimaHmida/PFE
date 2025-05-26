@@ -34,7 +34,17 @@
                     </div>
                 </div>
             </a>
+            <a href="{{ route('admin.affectations.index') }}" class="block bg-white border border-gray-200 rounded-md p-4 shadow-sm hover:shadow-md transition">
+                <div class="flex items-center space-x-3">
+                    <div class="text-yellow-500 text-xl">📌</div>
+                    <div>
+                        <h2 class="text-base font-medium text-gray-700">Affectations</h2>
+                    </div>
+                </div>
+            </a>
         @endif
 
     </div>
 </div>
+
+       

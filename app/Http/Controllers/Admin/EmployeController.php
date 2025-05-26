@@ -31,7 +31,7 @@ class EmployeController extends Controller
             'numero' => 'required|string|max:20',
             'fonction' => 'required|string|max:100',
             'adresse' => 'required|string|max:255',
-            'statut' => 'required|in:travail,malade,récupération',
+            'statut' => 'required|in:travail,congé,récupération',
         ]);
 
         Employe::create($validated);
@@ -48,7 +48,7 @@ class EmployeController extends Controller
             'numero' => 'required|string|max:20',
             'fonction' => 'required|string|max:100',
             'adresse' => 'required|string|max:255',
-            'statut' => 'required|in:travail,malade,récupération',
+            'statut' => 'required|in:travail,congé,récupération',
         ]);
 
         $employe->update($validated);

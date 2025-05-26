@@ -17,7 +17,7 @@
             <select name="statut" class="border p-2 rounded" required>
                 <option value="">-- Statut --</option>
                 <option value="travail">Travail</option>
-                <option value="malade">Malade</option>
+                <option value="congé">congé</option>
                 <option value="récupération">Récupération</option>
             </select>
             <button type="submit" class="col-span-4 sm:col-span-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Ajouter</button>
@@ -53,7 +53,7 @@
                         <td class="border p-1">
                             <select name="statut" class="w-full border rounded p-1">
                                 <option value="travail" @selected($employe->statut === 'travail')>Travail</option>
-                                <option value="malade" @selected($employe->statut === 'malade')>Malade</option>
+                                <option value="congé" @selected($employe->statut === 'congé')>congé</option>
                                 <option value="récupération" @selected($employe->statut === 'récupération')>Récupération</option>
                             </select>
                         </td>
