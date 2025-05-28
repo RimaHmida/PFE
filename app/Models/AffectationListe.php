@@ -4,15 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Affectation extends Model
+class AffectationListe extends Model
 {
     protected $fillable = [
         'site_id',
-        'employe_id',
         'date_debut',
         'date_fin',
-        'created_by',
         'statut',
+        'created_by',
     ];
 
     public function site()
@@ -20,8 +19,13 @@ class Affectation extends Model
         return $this->belongsTo(Site::class);
     }
 
-    public function employe()
+    public function employes()
     {
-        return $this->belongsTo(Employe::class);
+        return $this->belongsToMany(Employe::class, 'affectation_employes');
+    }
+
+    public function auteur()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('affectations', function (Blueprint $table) {
+        Schema::create('affectation_listes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('site_id')->constrained()->onDelete('cascade');
-            $table->foreignId('employe_id')->constrained()->onDelete('cascade');
             $table->date('date_debut');
             $table->date('date_fin');
             $table->enum('statut', ['en_cours', 'cloturee'])->default('en_cours');
@@ -28,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('affectations');
+        Schema::dropIfExists('affectation_listes');
     }
 };
