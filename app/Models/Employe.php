@@ -18,4 +18,9 @@ class Employe extends Model
         'adresse',
         'statut',
     ];
+    public function presences()
+{
+    return $this->hasMany(PresenceJournaliere::class);
+}
+
 }

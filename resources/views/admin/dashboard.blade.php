@@ -1,50 +1,55 @@
 @php $role = Auth::user()->role; @endphp
 
-<div class="max-w-6xl mx-auto py-10 px-6">
-    <h1 class="text-2xl font-semibold text-gray-800 mb-8">Bienvenue sur le Tableau de Bord</h1>
+<div class="max-w-7xl mx-auto py-12 px-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-10">Bienvenue sur le Tableau de Bord</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         @if ($role === 'administrateur_it')
-            <a href="{{ route('admin.users.index') }}" class="block bg-white border border-gray-200 rounded-md p-4 shadow-sm hover:shadow-md transition">
-                <div class="flex items-center space-x-3">
-                    <div class="text-blue-500 text-xl">👥</div>
+            <a href="{{ route('admin.users.index') }}"
+                class="bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-200 hover:to-blue-100 border border-blue-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
+                <div class="flex items-center space-x-4">
+                    <div class="text-blue-600 text-3xl">👥</div>
                     <div>
-                        <h2 class="text-base font-medium text-gray-700">Gestion des Utilisateurs</h2>
+                        <h2 class="text-lg font-semibold text-blue-900">Utilisateurs</h2>
+                        <p class="text-sm text-gray-600">Gérer les comptes des utilisateurs</p>
                     </div>
                 </div>
             </a>
         @endif
 
         @if ($role === 'administrateur' || $role === 'administrateur_it')
-            <a href="{{ route('admin.employes.index') }}" class="block bg-white border border-gray-200 rounded-md p-4 shadow-sm hover:shadow-md transition">
-                <div class="flex items-center space-x-3">
-                    <div class="text-green-500 text-xl">📋</div>
+            <a href="{{ route('admin.employes.index') }}"
+                class="bg-gradient-to-r from-green-100 to-green-50 hover:from-green-200 hover:to-green-100 border border-green-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
+                <div class="flex items-center space-x-4">
+                    <div class="text-green-600 text-3xl">📋</div>
                     <div>
-                        <h2 class="text-base font-medium text-gray-700">Gestion des Employés</h2>
+                        <h2 class="text-lg font-semibold text-green-900">Employés</h2>
+                        <p class="text-sm text-gray-600">Ajouter, modifier ou supprimer un employé</p>
                     </div>
                 </div>
             </a>
 
-            <a href="{{ route('admin.sites.index') }}" class="block bg-white border border-gray-200 rounded-md p-4 shadow-sm hover:shadow-md transition">
-                <div class="flex items-center space-x-3">
-                    <div class="text-indigo-500 text-xl">🏗️</div>
+            <a href="{{ route('admin.sites.index') }}"
+                class="bg-gradient-to-r from-indigo-100 to-indigo-50 hover:from-indigo-200 hover:to-indigo-100 border border-indigo-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
+                <div class="flex items-center space-x-4">
+                    <div class="text-indigo-600 text-3xl">🏗️</div>
                     <div>
-                        <h2 class="text-base font-medium text-gray-700">Gestion des Sites</h2>
+                        <h2 class="text-lg font-semibold text-indigo-900">Sites</h2>
+                        <p class="text-sm text-gray-600">Lister et gérer les sites de travail</p>
                     </div>
                 </div>
             </a>
-            <a href="{{ route('admin.affectation_listes.index') }}" class="block bg-white border border-gray-200 rounded-md p-4 shadow-sm hover:shadow-md transition">
-                <div class="flex items-center space-x-3">
-                    <div class="text-yellow-500 text-xl">📌</div>
+
+            <a href="{{ route('admin.affectation_listes.index') }}"
+                class="bg-gradient-to-r from-yellow-100 to-yellow-50 hover:from-yellow-200 hover:to-yellow-100 border border-yellow-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
+                <div class="flex items-center space-x-4">
+                    <div class="text-yellow-600 text-3xl">📌</div>
                     <div>
-                        <h2 class="text-base font-medium text-gray-700">Affectations</h2>
+                        <h2 class="text-lg font-semibold text-yellow-900">Affectations</h2>
+                        <p class="text-sm text-gray-600">Créer et suivre les affectations</p>
                     </div>
                 </div>
             </a>
         @endif
-
     </div>
 </div>
-
-       

@@ -82,4 +82,5 @@ class UserController extends Controller
 
         return Redirect::route('admin.users.index')->with('success', 'Utilisateur supprimé avec succès.');
     }
+    
 }
