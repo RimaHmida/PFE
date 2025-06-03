@@ -7,8 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
 
 class UserController extends Controller
 {
@@ -19,11 +17,15 @@ class UserController extends Controller
         }
     }
 
-    public function index(): View
+    public function index()
     {
         $this->authorizeAdmin();
         $users = User::all();
-        return view('admin.users.index', compact('users'));
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $users,
+        ], 200);
     }
 
     public function store(Request $request)
@@ -31,22 +33,26 @@ class UserController extends Controller
         $this->authorizeAdmin();
 
         $validated = $request->validate([
-            'nom' => 'required|string|max:255',
-            'prenom' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'nom'      => 'required|string|max:255',
+            'prenom'   => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:administrateur_it,administrateur,manager,secretaire,agent paie',
+            'role'     => 'required|in:administrateur_it,administrateur,manager,secretaire,agent paie',
         ]);
 
-        User::create([
-            'nom' => $validated['nom'],
-            'prenom' => $validated['prenom'],
-            'email' => $validated['email'],
+        $user = User::create([
+            'nom'      => $validated['nom'],
+            'prenom'   => $validated['prenom'],
+            'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
+            'role'     => $validated['role'],
         ]);
 
-        return Redirect::route('admin.users.index')->with('success', 'Utilisateur créé avec succès.');
+        return response()->json([
+            'status'  => 'success',
+            'data'    => $user,
+            'message' => 'Utilisateur créé avec succès.'
+        ], 201);
     }
 
     public function update(Request $request, User $user)
@@ -54,16 +60,16 @@ class UserController extends Controller
         $this->authorizeAdmin();
 
         $validated = $request->validate([
-            'nom' => 'required|string|max:255',
-            'prenom' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'role' => 'required|in:administrateur_it,administrateur,manager,secretaire,agent paie',
+            'nom'      => 'required|string|max:255',
+            'prenom'   => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email,' . $user->id,
+            'role'     => 'required|in:administrateur_it,administrateur,manager,secretaire,agent paie',
         ]);
 
-        $user->nom = $validated['nom'];
+        $user->nom    = $validated['nom'];
         $user->prenom = $validated['prenom'];
-        $user->email = $validated['email'];
-        $user->role = $validated['role'];
+        $user->email  = $validated['email'];
+        $user->role   = $validated['role'];
 
         if ($request->filled('password')) {
             $request->validate(['password' => 'nullable|string|min:8|confirmed']);
@@ -72,7 +78,11 @@ class UserController extends Controller
 
         $user->save();
 
-        return Redirect::route('admin.users.index')->with('success', 'Utilisateur mis à jour avec succès.');
+        return response()->json([
+            'status'  => 'success',
+            'data'    => $user,
+            'message' => 'Utilisateur mis à jour avec succès.'
+        ], 200);
     }
 
     public function destroy(User $user)
@@ -80,7 +90,9 @@ class UserController extends Controller
         $this->authorizeAdmin();
         $user->delete();
 
-        return Redirect::route('admin.users.index')->with('success', 'Utilisateur supprimé avec succès.');
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Utilisateur supprimé avec succès.'
+        ], 200);
     }
-    
 }

@@ -7,9 +7,8 @@ return [
     | Application Name
     |--------------------------------------------------------------------------
     |
-    | This value is the name of your application, which will be used when the
-    | framework needs to place the application's name in a notification or
-    | other UI elements where an application name needs to be displayed.
+    | Cette valeur correspond au nom de votre application, utilisée dans les
+    | notifications et autres éléments de l'interface utilisateur.
     |
     */
 
@@ -17,12 +16,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application Environment
+    | Environment de l'application
     |--------------------------------------------------------------------------
     |
-    | This value determines the "environment" your application is currently
-    | running in. This may determine how you prefer to configure various
-    | services the application utilizes. Set this in your ".env" file.
+    | Indique dans quel environnement votre application s'exécute.
     |
     */
 
@@ -30,12 +27,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application Debug Mode
+    | Mode Debug
     |--------------------------------------------------------------------------
     |
-    | When your application is in debug mode, detailed error messages with
-    | stack traces will be shown on every error that occurs within your
-    | application. If disabled, a simple generic error page is shown.
+    | Si activé, des messages d'erreur détaillés et les traces de pile
+    | sont affichés. Dans un environnement de production, cela doit être désactivé.
     |
     */
 
@@ -43,12 +39,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application URL
+    | URL de l'application
     |--------------------------------------------------------------------------
     |
-    | This URL is used by the console to properly generate URLs when using
-    | the Artisan command line tool. You should set this to the root of
-    | the application so that it's available within Artisan commands.
+    | L'URL utilisée par le framework pour générer des liens.
     |
     */
 
@@ -56,12 +50,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application Timezone
+    | Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | La timezone par défaut utilisée par PHP.
     |
     */
 
@@ -69,12 +61,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application Locale Configuration
+    | Locale
     |--------------------------------------------------------------------------
     |
-    | The application locale determines the default locale that will be used
-    | by Laravel's translation / localization methods. This option can be
-    | set to any locale for which you plan to have translation strings.
+    | La langue par défaut de l'application.
     |
     */
 
@@ -86,41 +76,82 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Encryption Key
+    | Clé de chiffrement
     |--------------------------------------------------------------------------
     |
-    | This key is utilized by Laravel's encryption services and should be set
-    | to a random, 32 character string to ensure that all encrypted values
-    | are secure. You should do this prior to deploying the application.
+    | Une clé aléatoire de 32 caractères utilisée par le service de chiffrement.
     |
     */
 
-    'cipher' => 'AES-256-CBC',
-
     'key' => env('APP_KEY'),
 
-    'previous_keys' => [
-        ...array_filter(
-            explode(',', env('APP_PREVIOUS_KEYS', ''))
-        ),
-    ],
+    'cipher' => 'AES-256-CBC',
+
+    'previous_keys' => array_filter(
+        explode(',', env('APP_PREVIOUS_KEYS', ''))
+    ),
 
     /*
     |--------------------------------------------------------------------------
-    | Maintenance Mode Driver
+    | Mode Maintenance
     |--------------------------------------------------------------------------
     |
-    | These configuration options determine the driver used to determine and
-    | manage Laravel's "maintenance mode" status. The "cache" driver will
-    | allow maintenance mode to be controlled across multiple machines.
-    |
-    | Supported drivers: "file", "cache"
+    | Permet de configurer le driver de mise en maintenance.
     |
     */
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+        'store'  => env('APP_MAINTENANCE_STORE', 'database'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Liste des Providers
+    |--------------------------------------------------------------------------
+    |
+    | Les fournisseurs de services listés ici sont chargés automatiquement
+    | par Laravel dans votre application. Vous pouvez y ajouter vos propres
+    | providers pour étendre les fonctionnalités.
+    |
+    */
+
+    'providers' => [
+
+        /*
+         * Fournisseurs de services du framework Laravel...
+         */
+        Illuminate\Auth\AuthServiceProvider::class,
+        Illuminate\Broadcasting\BroadcastServiceProvider::class,
+        Illuminate\Bus\BusServiceProvider::class,
+        Illuminate\Cache\CacheServiceProvider::class,
+        Illuminate\Foundation\Providers\ConsoleSupportServiceProvider::class,
+        Illuminate\Cookie\CookieServiceProvider::class,
+        Illuminate\Database\DatabaseServiceProvider::class,
+        Illuminate\Encryption\EncryptionServiceProvider::class,
+        Illuminate\Filesystem\FilesystemServiceProvider::class,
+        Illuminate\Foundation\Providers\FoundationServiceProvider::class,
+        Illuminate\Hashing\HashServiceProvider::class,
+        Illuminate\Mail\MailServiceProvider::class,
+        Illuminate\Notifications\NotificationServiceProvider::class,
+        Illuminate\Pagination\PaginationServiceProvider::class,
+        Illuminate\Pipeline\PipelineServiceProvider::class,
+        Illuminate\Queue\QueueServiceProvider::class,
+        Illuminate\Redis\RedisServiceProvider::class,
+        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
+        Illuminate\Session\SessionServiceProvider::class,
+        Illuminate\Translation\TranslationServiceProvider::class,
+        Illuminate\Validation\ValidationServiceProvider::class,
+        Illuminate\View\ViewServiceProvider::class,
+
+        /*
+         * Fournisseurs de services spécifiques à votre application...
+         */
+        App\Providers\AppServiceProvider::class,
+        App\Providers\AuthServiceProvider::class,
+        // App\Providers\BroadcastServiceProvider::class, // Décommenter si utilisé
+        App\Providers\EventServiceProvider::class,
+        App\Providers\RouteServiceProvider::class,
     ],
 
 ];

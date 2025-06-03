@@ -8,7 +8,6 @@ use App\Models\Employe;
 use App\Models\Site;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
 
 class AffectationListeController extends Controller
 {
@@ -18,33 +17,48 @@ class AffectationListeController extends Controller
         $employes = Employe::where('statut', 'travail')->get();
         $sites = Site::all();
 
-        return view('admin.affectations.index', compact('listes', 'employes', 'sites'));
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'listes'   => $listes,
+                'employes' => $employes,
+                'sites'    => $sites,
+            ]
+        ], 200);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'site_id' => 'required|exists:sites,id',
+        $validated = $request->validate([
+            'site_id'    => 'required|exists:sites,id',
             'date_debut' => 'required|date',
-            'date_fin' => 'required|date|after_or_equal:date_debut',
-            'employes' => 'required|array|min:1',
+            'date_fin'   => 'required|date|after_or_equal:date_debut',
+            'employes'   => 'required|array|min:1',
         ]);
 
         $liste = AffectationListe::create([
-            'site_id' => $request->site_id,
-            'date_debut' => $request->date_debut,
-            'date_fin' => $request->date_fin,
+            'site_id'    => $validated['site_id'],
+            'date_debut' => $validated['date_debut'],
+            'date_fin'   => $validated['date_fin'],
             'created_by' => Auth::id(),
         ]);
 
-        $liste->employes()->attach($request->employes);
+        $liste->employes()->attach($validated['employes']);
 
-        return Redirect::route('admin.affectation_listes.index')->with('success', 'Liste créée avec succès.');
+        return response()->json([
+            'status'  => 'success',
+            'data'    => $liste,
+            'message' => 'Liste créée avec succès.'
+        ], 201);
     }
 
     public function destroy(AffectationListe $affectationListe)
     {
         $affectationListe->delete();
-        return Redirect::route('admin.affectation_listes.index')->with('success', 'Liste supprimée.');
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Liste supprimée.'
+        ], 200);
     }
 }

@@ -10,14 +10,10 @@ use Illuminate\Support\Facades\Auth;
 
 class PresenceJournaliereController extends Controller
 {
-    /**
-     * Affiche uniquement les employés affectés aujourd'hui et dont la présence n'a pas encore été enregistrée.
-     */
     public function index()
     {
         $today = now()->toDateString();
 
-        // Récupère les listes d'affectation actives aujourd'hui, avec les employés n'ayant pas encore de présence enregistrée aujourd'hui
         $affectations = AffectationListe::with(['site', 'employes' => function ($query) use ($today) {
             $query->whereDoesntHave('presences', function ($q) use ($today) {
                 $q->whereDate('date', $today);
@@ -27,37 +23,41 @@ class PresenceJournaliereController extends Controller
         ->whereDate('date_fin', '>=', $today)
         ->get();
 
-        return view('secretaire.presences.index', compact('affectations', 'today'));
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'affectations' => $affectations,
+                'today'        => $today,
+            ],
+        ], 200);
     }
 
-    /**
-     * Enregistre uniquement les employés qui ont été cochés comme présents.
-     */
     public function store(Request $request)
     {
-        $today = now()->toDateString();
-        $userId = Auth::id();
+        // Récupère l'ID de l'utilisateur authentifié
+        $userId = Auth::id(); // ou $request->user()->id si le middleware d'authentification est utilisé
 
-        // Récupère uniquement les employés cochés
-        $checkedPresences = $request->input('presences', []);
+        // Vérifie si l'utilisateur est authentifié
+        if (!$userId) {
+            return response()->json(['status' => 'error', 'message' => 'Utilisateur non authentifié.'], 401);
+        }
 
-        // Enregistre uniquement ceux qui ont été cochés comme présents
-        foreach ($checkedPresences as $affectationId => $employes) {
-            foreach ($employes as $employeId => $value) {
+        $presences = $request->input('presences');
+        foreach ($presences as $affectationListeId => $presentGroup) {
+            foreach ($presentGroup as $employeId => $present) {
                 PresenceJournaliere::updateOrCreate(
                     [
-                        'affectation_liste_id' => $affectationId,
-                        'employe_id' => $employeId,
-                        'date' => $today,
+                        'affectation_liste_id' => $affectationListeId,
+                        'employe_id'           => $employeId,
+                        'date'                 => date('Y-m-d'),
                     ],
                     [
-                        'present' => true,
-                        'recorded_by' => $userId,
+                        'present'    => $present,
+                        'recorded_by'=> $userId, // ajoute l'ID de l'utilisateur
                     ]
                 );
             }
         }
-
-        return redirect()->back()->with('success', 'Présences enregistrées.');
+        return response()->json(['status' => 'success', 'message' => 'Présences enregistrées.']);
     }
 }

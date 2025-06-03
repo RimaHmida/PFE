@@ -3,29 +3,24 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
+use Illuminate\Http\JsonResponse;
 
 class ConfirmablePasswordController extends Controller
 {
-    /**
-     * Show the confirm password view.
-     */
-    public function show(): View
+    public function show(): JsonResponse
     {
-        return view('auth.confirm-password');
+        return response()->json([
+            'message' => 'Veuillez confirmer votre mot de passe.'
+        ], 200);
     }
 
-    /**
-     * Confirm the user's password.
-     */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse
     {
         if (! Auth::guard('web')->validate([
-            'email' => $request->user()->email,
+            'email'    => $request->user()->email,
             'password' => $request->password,
         ])) {
             throw ValidationException::withMessages([
@@ -35,6 +30,10 @@ class ConfirmablePasswordController extends Controller
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return response()->json([
+            'status'   => 'success',
+            'message'  => 'Mot de passe confirmé.',
+            'redirect' => route('dashboard', [], false)
+        ], 200);
     }
 }
