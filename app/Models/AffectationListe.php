@@ -21,7 +21,7 @@ class AffectationListe extends Model
 
     public function employes()
     {
-        return $this->belongsToMany(Employe::class, 'affectation_employes');
+        return $this->belongsToMany(Employe::class, 'affectation_liste_employe');
     }
 
     public function auteur()

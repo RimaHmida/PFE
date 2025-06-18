@@ -7,7 +7,7 @@ use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\AffectationListeController;
 use App\Http\Controllers\Secretaire\PresenceJournaliereController;
 use App\Http\Controllers\Manager\PresenceValidationController;
-
+use App\Http\Controllers\Admin\DashboardController;
 // Routes pour l'administration
 Route::prefix('admin')->middleware('auth:api')->group(function () {
     Route::apiResource('employes', EmployeController::class);
@@ -45,3 +45,6 @@ Route::middleware('auth:api')->group(function () {
 
 // Route pour le register
 Route::post('register', [AuthController::class, 'register']);
+
+//dashboard admin
+Route::get('/admin/dashboard-data', [DashboardController::class, 'adminData']);

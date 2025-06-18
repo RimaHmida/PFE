@@ -23,4 +23,9 @@ class Employe extends Model
     return $this->hasMany(PresenceJournaliere::class);
 }
 
+public function affectations()
+{
+    return $this->belongsToMany(\App\Models\AffectationListe::class, 'affectation_liste_employe');
+}
+
 }

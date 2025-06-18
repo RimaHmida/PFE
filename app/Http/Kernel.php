@@ -29,4 +29,20 @@ class Kernel extends HttpKernel
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'is_admin' => \App\Http\Middleware\AdminMiddleware::class,
             ];
+
+            protected $commands = [
+                \App\Console\Commands\ResetRecuperationStatus::class,
+            ];
+            protected function schedule(Schedule $schedule)
+    {
+        // This tells Laravel to run the command every day
+        $schedule->command('employes:reset-recuperation')->daily();
+    }
+
+    protected function commands()
+    {
+        $this->load(__DIR__.'/Commands');
+        require base_path('routes/console.php');
+    }
+
 }

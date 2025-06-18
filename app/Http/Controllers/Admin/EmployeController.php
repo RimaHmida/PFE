@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use App\Services\EmployeStatutService;
 use App\Http\Controllers\Controller;
 use App\Models\Employe;
 use Illuminate\Http\Request;
