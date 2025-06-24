@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('fonction');
             $table->string('adresse');
             $table->enum('statut', ['travail', 'congé', 'récupération'])->default('travail');
+            $table->integer('jours_recuperation')->default(0);
+            $table->integer('jours_recuperation_restants')->default(0);
             $table->timestamps();
         });
        

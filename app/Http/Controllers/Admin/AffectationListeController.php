@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Services\EmployeStatutService;
 use App\Http\Controllers\Controller;
 use App\Models\AffectationListe;
+use App\Models\AffectationListeEmploye;
 use App\Models\Employe;
 use App\Models\Site;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class AffectationListeController extends Controller
 {
     public function index()
 {
-    EmployeStatutService::verifierEtMettreAJourStatuts();
+    EmployeStatutService::verifierEtMettreAJourStatuts(); 
 
     $listes = AffectationListe::with('site', 'employes')->get();
     $employes = Employe::where('statut', 'travail')->get();
@@ -38,9 +39,12 @@ public function store(Request $request)
         'date_debut' => 'required|date',
         'date_fin'   => 'required|date|after_or_equal:date_debut',
         'employes'   => 'required|array|min:1',
+        'employes.*.id' => 'required|exists:employes,id',
+        'employes.*.date_debut_reelle' => 'required|date',
+        'employes.*.date_fin_reelle'   => 'required|date|after_or_equal:employes.*.date_debut_reelle',
     ]);
 
-    // Check if there's already an affectation for this site in the same period
+    // Vérification des chevauchements d'affectation pour ce site
     $overlapExists = AffectationListe::where('site_id', $validated['site_id'])
         ->where(function ($query) use ($validated) {
             $query->whereBetween('date_debut', [$validated['date_debut'], $validated['date_fin']])
@@ -58,7 +62,7 @@ public function store(Request $request)
         ], 422);
     }
 
-    // Create affectation
+    // Création de l'affectation
     $liste = AffectationListe::create([
         'site_id'    => $validated['site_id'],
         'date_debut' => $validated['date_debut'],
@@ -66,31 +70,20 @@ public function store(Request $request)
         'created_by' => Auth::id(),
     ]);
 
-    // Attach employees to affectation
-    $liste->employes()->attach($validated['employes']);
-
-    // Put their status to 'récupération'
-    //Employe::whereIn('id', $validated['employes'])->update(['statut' => 'récupération']);
+    // Attacher les employés avec leurs dates personnalisées
+    foreach ($validated['employes'] as $emp) {
+        $liste->employes()->attach($emp['id'], [
+            'date_debut_reelle' => $emp['date_debut_reelle'],
+            'date_fin_reelle'   => $emp['date_fin_reelle'],
+        ]);
+    }
 
     return response()->json([
         'status'  => 'success',
-        'data'    => $liste,
+        'data'    => $liste->load('employes', 'site'),
         'message' => 'Affectation créée avec succès.'
     ], 201);
 }
 
-//
-public function destroy(AffectationListe $affectationListe)
-{
-    // Supprimer les relations avec les employés dans la table pivot
-    $affectationListe->employes()->detach();
 
-    // Supprimer l'affectation elle-même
-    $affectationListe->delete();
-
-    return response()->json([
-        'status'  => 'success',
-        'message' => 'Liste supprimée.'
-    ], 200);
-}
 }

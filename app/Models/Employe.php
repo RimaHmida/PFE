@@ -1,9 +1,7 @@
 <?php
-
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 
 class Employe extends Model
 {
@@ -17,6 +15,7 @@ class Employe extends Model
         'fonction',
         'adresse',
         'statut',
+        'jours_recuperation', 
     ];
     public function presences()
 {
@@ -26,6 +25,14 @@ class Employe extends Model
 public function affectations()
 {
     return $this->belongsToMany(\App\Models\AffectationListe::class, 'affectation_liste_employe');
+}
+
+
+
+
+public function conges()
+{
+    return $this->hasMany(Conge::class);
 }
 
 }
