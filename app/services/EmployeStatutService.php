@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Employe;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class EmployeStatutService
 {
@@ -13,35 +14,69 @@ class EmployeStatutService
         $employes = Employe::with(['affectations', 'conges'])->get();
 
         foreach ($employes as $employe) {
-            $conge = $employe->conges->first(function ($c) use ($today) {
-                return $today->between(Carbon::parse($c->date_debut), Carbon::parse($c->date_fin));
-            });
+            try {
+                // 🔹 Vérifier s'il est en congé aujourd'hui
+                $congeActuel = $employe->conges->first(function ($c) use ($today) {
+                    return $today->between(Carbon::parse($c->date_debut), Carbon::parse($c->date_fin));
+                });
 
-            if ($conge) {
-                if ($employe->statut !== 'congé') {
-                    $employe->update(['statut' => 'congé']);
-                }
-                continue;
-            }
-
-            $derniereAffectation = $employe->affectations->sortByDesc('date_fin')->first();
-
-            if ($derniereAffectation) {
-                $dateFin = Carbon::parse($derniereAffectation->date_fin);
-                $dateDebut = Carbon::parse($derniereAffectation->date_debut);
-                $dureeTravail = $dateDebut->diffInDays($dateFin) + 1;
-                $diff = $today->diffInDays($dateFin, false); // false pour résultat négatif si today < fin
-
-                if ($diff < $dureeTravail && $diff >= 0) {
-                    if ($employe->statut !== 'récupération') {
-                        $employe->update(['statut' => 'récupération']);
+                if ($congeActuel) {
+                    if ($employe->statut !== 'congé') {
+                        $employe->update(['statut' => 'congé']);
                     }
-                    continue;
+                    continue; // Si congé, on ne va pas plus loin
                 }
-            }
 
-            if ($employe->statut !== 'travail') {
-                $employe->update(['statut' => 'travail']);
+                // 🔹 Dernière affectation
+                $derniereAffect = $employe->affectations
+                    ->filter(fn($a) => $a->pivot->date_debut_reelle && $a->pivot->date_fin_reelle)
+                    ->sortByDesc(fn($a) => $a->pivot->date_fin_reelle)
+                    ->first();
+
+                if ($derniereAffect) {
+                    $debut = Carbon::parse($derniereAffect->pivot->date_debut_reelle);
+                    $fin = Carbon::parse($derniereAffect->pivot->date_fin_reelle);
+                    $joursAffectation = $debut->diffInDays($fin) + 1;
+
+                    // 🔹 Jours non justifiés pendant l'affectation
+                    $joursNonJust = $employe->conges
+                        ->where('type', 'non justifié')
+                        ->reduce(function ($carry, $conge) use ($debut, $fin) {
+                            $start = Carbon::parse($conge->date_debut);
+                            $end = Carbon::parse($conge->date_fin);
+                            return $carry + max(0, $start->diffInDays(min($end, $fin)) + 1);
+                        }, 0);
+
+                    $joursTravail = $joursAffectation - $joursNonJust;
+
+                    // 🔹 Période de récupération
+                    $recupDebut = $fin->copy()->addDay();
+                    $joursDepuisRecup = $recupDebut->diffInDays($today, false);
+
+                    if ($today->lte($fin)) {
+                        $employe->statut !== 'travail' && $employe->update(['statut' => 'travail']);
+                        $employe->jours_recuperation_restants = 0;
+                    } elseif ($joursDepuisRecup < $joursTravail) {
+                        $employe->statut !== 'récupération' && $employe->update(['statut' => 'récupération']);
+                        $employe->jours_recuperation_restants = $joursTravail - $joursDepuisRecup;
+                    } else {
+                        $employe->statut !== 'standby' && $employe->update(['statut' => 'standby']);
+                        $employe->jours_recuperation_restants = 0;
+                    }
+
+                    $employe->save();
+
+                } else {
+                    // 🔹 Aucun travail récent = standby
+                    if ($employe->statut !== 'standby') {
+                        $employe->update(['statut' => 'standby']);
+                    }
+                    $employe->jours_recuperation_restants = 0;
+                    $employe->save();
+                }
+
+            } catch (\Exception $e) {
+                Log::error("Erreur statut employé ID {$employe->id} : " . $e->getMessage());
             }
         }
     }
@@ -49,43 +84,44 @@ class EmployeStatutService
     public static function getEmployesAvecRecup()
     {
         self::verifierEtMettreAJourStatuts();
-        $today = Carbon::today();
 
-        return Employe::with(['affectations', 'conges'])->get()->map(function ($emp) use ($today) {
-            $joursRecup = 0;
+        $employes = Employe::with(['affectations', 'conges'])->get();
 
-            $derniereAffectation = $emp->affectations->sortByDesc('date_fin')->first();
+        foreach ($employes as $employe) {
+            $derniereAffect = $employe->affectations
+                ->filter(fn($a) => $a->pivot->date_debut_reelle && $a->pivot->date_fin_reelle)
+                ->sortByDesc(fn($a) => $a->pivot->date_fin_reelle)
+                ->first();
 
-            if ($derniereAffectation) {
-                $debut = Carbon::parse($derniereAffectation->date_debut);
-                $fin = Carbon::parse($derniereAffectation->date_fin);
-                $duree = $debut->diffInDays($fin) + 1;
-                $joursRecup = $duree;
+            if ($derniereAffect) {
+                $debut = Carbon::parse($derniereAffect->pivot->date_debut_reelle);
+                $fin = Carbon::parse($derniereAffect->pivot->date_fin_reelle);
+                $joursAffectation = $debut->diffInDays($fin) + 1;
 
-                // Retirer jours écoulés depuis la fin de l'affectation
-                $joursEcoules = $fin->diffInDays($today, false);
-                if ($joursEcoules > 0) {
-                    $joursRecup -= $joursEcoules;
+                $joursCongeNonJust = $employe->conges
+                    ->where('type', 'non justifié')
+                    ->reduce(function ($carry, $conge) use ($debut, $fin) {
+                        $start = Carbon::parse($conge->date_debut);
+                        $end = Carbon::parse($conge->date_fin);
+                        return $carry + max(0, $start->diffInDays(min($end, $fin)) + 1);
+                    }, 0);
+
+                $joursTravail = $joursAffectation - $joursCongeNonJust;
+
+                $recupDebut = $fin->copy()->addDay();
+                $joursDepuisRecup = $recupDebut->diffInDays(Carbon::today(), false);
+
+                if ($joursDepuisRecup < $joursTravail && $joursDepuisRecup >= 0) {
+                    $employe->jours_recuperation_restants = $joursTravail - $joursDepuisRecup;
+                } else {
+                    $employe->jours_recuperation_restants = 0;
                 }
 
-                // Retirer congés non justifiés pendant cette affectation
-                foreach ($emp->conges as $c) {
-                    if ($c->type === 'non justifié') {
-                        $cDebut = Carbon::parse($c->date_debut);
-                        $cFin = Carbon::parse($c->date_fin);
-
-                        if ($cFin >= $debut && $cDebut <= $fin) {
-                            $overlapStart = $cDebut->greaterThan($debut) ? $cDebut : $debut;
-                            $overlapEnd = $cFin->lessThan($fin) ? $cFin : $fin;
-                            $joursConge = $overlapStart->diffInDays($overlapEnd) + 1;
-                            $joursRecup -= $joursConge;
-                        }
-                    }
-                }
+            } else {
+                $employe->jours_recuperation_restants = 0;
             }
+        }
 
-            $emp->jours_recuperation_restants = max(0, $joursRecup);
-            return $emp;
-        });
+        return $employes;
     }
 }

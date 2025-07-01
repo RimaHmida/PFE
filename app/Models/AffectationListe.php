@@ -19,10 +19,7 @@ class AffectationListe extends Model
         return $this->belongsTo(Site::class);
     }
 
-    //public function employes()
-    //{
-       // return $this->belongsToMany(Employe::class, 'affectation_liste_employe');
-    //}
+  
 
     public function employes()
     {
