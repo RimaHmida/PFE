@@ -13,50 +13,75 @@ class PresenceJournaliereController extends Controller
     public function index()
     {
         $today = now()->toDateString();
-        $affectations = AffectationListe::with(['site', 'employes' => function ($query) use ($today) {
-            $query->whereDoesntHave('presences', function ($q) use ($today) {
-                $q->whereDate('date', $today);
-            });
+
+        $affectations = AffectationListe::with(['site', 'employes' => function($query) {
+            $query->with(['presences' => function($q) {
+                $q->whereDate('date', now()->toDateString());
+            }]);
         }])
         ->whereDate('date_debut', '<=', $today)
         ->whereDate('date_fin', '>=', $today)
         ->get();
 
+        $data = $affectations->map(function ($aff) {
+            return [
+                'id' => $aff->id,
+                'site' => $aff->site,
+                'date_debut' => $aff->date_debut,
+                'date_fin' => $aff->date_fin,
+                'dates' => $this->generateDateRange($aff->date_debut, $aff->date_fin),
+                'employes' => $aff->employes,
+            ];
+        });
+
         return response()->json([
             'status' => 'success',
-            'data'   => [
-                'affectations' => $affectations,
-                'today'        => $today,
+            'data' => [
+                'affectations' => $data,
             ],
-        ], 200);
+        ]);
+    }
+
+    private function generateDateRange($start, $end)
+    {
+        $dates = [];
+        $current = \Carbon\Carbon::parse($start);
+        $end = \Carbon\Carbon::parse($end);
+        while ($current->lte($end)) {
+            $dates[] = $current->format('Y-m-d');
+            $current->addDay();
+        }
+        return $dates;
     }
 
     public function store(Request $request)
     {
-        // Récupère l'ID de l'utilisateur authentifié
-        $userId = Auth::id(); // ou $request->user()->id si le middleware d'authentification est utilisé
+        $userId = Auth::id();
 
-        // Vérifie si l'utilisateur est authentifié
         if (!$userId) {
             return response()->json(['status' => 'error', 'message' => 'Utilisateur non authentifié.'], 401);
         }
 
         $presences = $request->input('presences');
-        foreach ($presences as $affectationListeId => $presentGroup) {
-            foreach ($presentGroup as $employeId => $present) {
-                PresenceJournaliere::updateOrCreate(
-                    [
-                        'affectation_liste_id' => $affectationListeId,
-                        'employe_id'           => $employeId,
-                        'date'                 => date('Y-m-d'),
-                    ],
-                    [
-                        'present'    => $present,
-                        'recorded_by'=> $userId, // ajoute l'ID de l'utilisateur
-                    ]
-                );
+
+        foreach ($presences as $affectationId => $dates) {
+            foreach ($dates as $date => $employes) {
+                foreach ($employes as $employeId => $present) {
+                    PresenceJournaliere::firstOrCreate(
+                        [
+                            'affectation_liste_id' => $affectationId,
+                            'employe_id' => $employeId,
+                            'date' => $date,
+                        ],
+                        [
+                            'present' => $present,
+                            'recorded_by' => $userId,
+                        ]
+                    );
+                }
             }
         }
+
         return response()->json(['status' => 'success', 'message' => 'Présences enregistrées.']);
     }
 }
