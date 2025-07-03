@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\Employe;
@@ -15,19 +14,20 @@ class EmployeStatutService
 
         foreach ($employes as $employe) {
             try {
-                // 🔹 Vérifier s'il est en congé aujourd'hui
+                // Vérifier congé en cours
                 $congeActuel = $employe->conges->first(function ($c) use ($today) {
                     return $today->between(Carbon::parse($c->date_debut), Carbon::parse($c->date_fin));
                 });
 
                 if ($congeActuel) {
-                    if ($employe->statut !== 'congé') {
-                        $employe->update(['statut' => 'congé']);
-                    }
-                    continue; // Si congé, on ne va pas plus loin
+                    $employe->update([
+                        'statut' => 'congé',
+                        'jours_recuperation_restants' => 0
+                    ]);
+                    continue;
                 }
 
-                // 🔹 Dernière affectation
+                // Dernière affectation
                 $derniereAffect = $employe->affectations
                     ->filter(fn($a) => $a->pivot->date_debut_reelle && $a->pivot->date_fin_reelle)
                     ->sortByDesc(fn($a) => $a->pivot->date_fin_reelle)
@@ -38,41 +38,47 @@ class EmployeStatutService
                     $fin = Carbon::parse($derniereAffect->pivot->date_fin_reelle);
                     $joursAffectation = $debut->diffInDays($fin) + 1;
 
-                    // 🔹 Jours non justifiés pendant l'affectation
+                    // Calcul des jours non justifiés pendant l'affectation
                     $joursNonJust = $employe->conges
                         ->where('type', 'non justifié')
                         ->reduce(function ($carry, $conge) use ($debut, $fin) {
-                            $start = Carbon::parse($conge->date_debut);
-                            $end = Carbon::parse($conge->date_fin);
-                            return $carry + max(0, $start->diffInDays(min($end, $fin)) + 1);
+                            $start = Carbon::parse($conge->date_debut)->max($debut);
+                            $end = Carbon::parse($conge->date_fin)->min($fin);
+                            return $carry + max(0, $start->diffInDays($end) + 1);
                         }, 0);
 
-                    $joursTravail = $joursAffectation - $joursNonJust;
+                    $joursTravail = max(0, $joursAffectation - $joursNonJust);
 
-                    // 🔹 Période de récupération
+                    // Calcul récupération
                     $recupDebut = $fin->copy()->addDay();
                     $joursDepuisRecup = $recupDebut->diffInDays($today, false);
 
-                    if ($today->lte($fin)) {
-                        $employe->statut !== 'travail' && $employe->update(['statut' => 'travail']);
-                        $employe->jours_recuperation_restants = 0;
-                    } elseif ($joursDepuisRecup < $joursTravail) {
-                        $employe->statut !== 'récupération' && $employe->update(['statut' => 'récupération']);
-                        $employe->jours_recuperation_restants = $joursTravail - $joursDepuisRecup;
+                    if ($today->between($debut, $fin)) {
+                        // En travail
+                        $employe->update([
+                            'statut' => 'travail',
+                            'jours_recuperation_restants' => 0
+                        ]);
+                    } elseif ($joursDepuisRecup >= 0 && $joursDepuisRecup < $joursTravail) {
+                        // En récupération
+                        $employe->update([
+                            'statut' => 'récupération',
+                            'jours_recuperation_restants' => $joursTravail - $joursDepuisRecup
+                        ]);
                     } else {
-                        $employe->statut !== 'standby' && $employe->update(['statut' => 'standby']);
-                        $employe->jours_recuperation_restants = 0;
+                        // Fin récupération
+                        $employe->update([
+                            'statut' => 'standby',
+                            'jours_recuperation_restants' => 0
+                        ]);
                     }
-
-                    $employe->save();
 
                 } else {
-                    // 🔹 Aucun travail récent = standby
-                    if ($employe->statut !== 'standby') {
-                        $employe->update(['statut' => 'standby']);
-                    }
-                    $employe->jours_recuperation_restants = 0;
-                    $employe->save();
+                    // Pas d'affectation récente
+                    $employe->update([
+                        'statut' => 'standby',
+                        'jours_recuperation_restants' => 0
+                    ]);
                 }
 
             } catch (\Exception $e) {
@@ -98,20 +104,20 @@ class EmployeStatutService
                 $fin = Carbon::parse($derniereAffect->pivot->date_fin_reelle);
                 $joursAffectation = $debut->diffInDays($fin) + 1;
 
-                $joursCongeNonJust = $employe->conges
+                $joursNonJust = $employe->conges
                     ->where('type', 'non justifié')
                     ->reduce(function ($carry, $conge) use ($debut, $fin) {
-                        $start = Carbon::parse($conge->date_debut);
-                        $end = Carbon::parse($conge->date_fin);
-                        return $carry + max(0, $start->diffInDays(min($end, $fin)) + 1);
+                        $start = Carbon::parse($conge->date_debut)->max($debut);
+                        $end = Carbon::parse($conge->date_fin)->min($fin);
+                        return $carry + max(0, $start->diffInDays($end) + 1);
                     }, 0);
 
-                $joursTravail = $joursAffectation - $joursCongeNonJust;
+                $joursTravail = max(0, $joursAffectation - $joursNonJust);
 
                 $recupDebut = $fin->copy()->addDay();
                 $joursDepuisRecup = $recupDebut->diffInDays(Carbon::today(), false);
 
-                if ($joursDepuisRecup < $joursTravail && $joursDepuisRecup >= 0) {
+                if ($joursDepuisRecup >= 0 && $joursDepuisRecup < $joursTravail) {
                     $employe->jours_recuperation_restants = $joursTravail - $joursDepuisRecup;
                 } else {
                     $employe->jours_recuperation_restants = 0;

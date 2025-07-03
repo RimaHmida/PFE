@@ -11,13 +11,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Response;
+use Carbon\Carbon;
+
 class AffectationListeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         EmployeStatutService::verifierEtMettreAJourStatuts();
-
+    
         $listes = AffectationListe::with([
             'site',
             'employes' => function ($q) {
@@ -25,17 +26,72 @@ class AffectationListeController extends Controller
                   ->withPivot('id', 'date_debut_reelle', 'date_fin_reelle');
             }
         ])->get();
-
+    
+        $futureDebut = $request->query('date_debut') ? Carbon::parse($request->query('date_debut')) : Carbon::today();
+        $futureFin = $request->query('date_fin') ? Carbon::parse($request->query('date_fin')) : $futureDebut;
+    
+        $employes = Employe::with(['affectations', 'conges'])->get()->filter(function ($emp) use ($futureDebut, $futureFin) {
+            if (in_array($emp->statut, ['standby', 'travail'])) {
+                return true;
+            }
+    
+            if ($emp->statut === 'récupération') {
+                $derniere = $emp->affectations
+                    ->filter(fn($a) => $a->pivot->date_debut_reelle && $a->pivot->date_fin_reelle)
+                    ->sortByDesc(fn($a) => $a->pivot->date_fin_reelle)
+                    ->first();
+    
+                if (!$derniere) {
+                    Log::info('EMPLOYE DEBUG (aucune affectation)', [
+                        'id' => $emp->id,
+                        'nom' => $emp->nom,
+                        'futureDebut' => $futureDebut->toDateString()
+                    ]);
+                    return true;
+                }
+    
+                $debut = Carbon::parse($derniere->pivot->date_debut_reelle);
+                $fin = Carbon::parse($derniere->pivot->date_fin_reelle);
+                $joursAffect = $debut->diffInDays($fin) + 1;
+    
+                $joursNonJust = $emp->conges
+                    ->where('type', 'non justifié')
+                    ->reduce(function ($carry, $c) use ($debut, $fin) {
+                        $start = Carbon::parse($c->date_debut);
+                        $end = Carbon::parse($c->date_fin);
+                        return $carry + max(0, $start->diffInDays(min($end, $fin)) + 1);
+                    }, 0);
+    
+                $joursTravail = max(0, $joursAffect - $joursNonJust);
+                $recupFin = $fin->copy()->addDays($joursTravail);
+    
+                Log::info('EMPLOYE DEBUG', [
+                    'id' => $emp->id,
+                    'nom' => $emp->nom,
+                    'recupFin' => $recupFin->toDateString(),
+                    'futureDebut' => $futureDebut->toDateString(),
+                    'futureFin' => $futureFin->toDateString(),
+                    'joursTravail' => $joursTravail,
+                    'fin' => $fin->toDateString(),
+                ]);
+    
+                // Include if recupFin before or during requested period
+                return $recupFin->lte($futureDebut) || $recupFin->between($futureDebut, $futureFin);
+            }
+    
+            return true;
+        })->values();
+    
         return response()->json([
             'status' => 'success',
             'data' => [
                 'listes' => $listes,
-                'employes' => Employe::where('statut', 'travail')->get(),
+                'employes' => $employes,
                 'sites' => Site::all(),
             ]
         ]);
     }
-
+    
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -57,6 +113,13 @@ class AffectationListeController extends Controller
 
         if (!empty($validated['employes'])) {
             foreach ($validated['employes'] as $emp) {
+                if ($this->hasConflict($emp['id'], $emp['date_debut_reelle'], $emp['date_fin_reelle'])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Cet employé a déjà une affectation qui chevauche cette période."
+                    ], 422);
+                }
+
                 $affectation->employes()->attach($emp['id'], [
                     'date_debut_reelle' => $emp['date_debut_reelle'],
                     'date_fin_reelle' => $emp['date_fin_reelle'],
@@ -85,11 +148,14 @@ class AffectationListeController extends Controller
                 'date_fin_reelle' => 'required|date|after_or_equal:date_debut_reelle',
             ]);
 
-            $affectation = AffectationListe::findOrFail($affectationId);
-
-            if ($affectation->employes()->where('employe_id', $validated['employe_id'])->exists()) {
-                return response()->json(['status' => 'error', 'message' => 'Cet employé est déjà affecté'], 422);
+            if ($this->hasConflict($validated['employe_id'], $validated['date_debut_reelle'], $validated['date_fin_reelle'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cet employé est déjà affecté sur cette période.'
+                ], 422);
             }
+
+            $affectation = AffectationListe::findOrFail($affectationId);
 
             $affectation->employes()->attach($validated['employe_id'], [
                 'date_debut_reelle' => $validated['date_debut_reelle'],
@@ -110,6 +176,21 @@ class AffectationListeController extends Controller
             Log::error("Erreur ajouterEmployeAffectation : " . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => 'Erreur lors de l\'ajout'], 500);
         }
+    }
+
+    private function hasConflict($employeId, $start, $end)
+    {
+        return DB::table('affectation_liste_employe')
+            ->where('employe_id', $employeId)
+            ->where(function ($q) use ($start, $end) {
+                $q->whereBetween('date_debut_reelle', [$start, $end])
+                  ->orWhereBetween('date_fin_reelle', [$start, $end])
+                  ->orWhere(function ($q2) use ($start, $end) {
+                      $q2->where('date_debut_reelle', '<=', $start)
+                         ->where('date_fin_reelle', '>=', $end);
+                  });
+            })
+            ->exists();
     }
 
     public function updatePivot(Request $request, $pivotId)

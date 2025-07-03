@@ -13,7 +13,6 @@ class PresenceJournaliereController extends Controller
     public function index()
     {
         $today = now()->toDateString();
-
         $affectations = AffectationListe::with(['site', 'employes' => function ($query) use ($today) {
             $query->whereDoesntHave('presences', function ($q) use ($today) {
                 $q->whereDate('date', $today);
