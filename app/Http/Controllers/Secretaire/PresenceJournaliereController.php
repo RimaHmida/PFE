@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\AffectationListe;
 use App\Models\PresenceJournaliere;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class PresenceJournaliereController extends Controller
 {
@@ -14,23 +15,40 @@ class PresenceJournaliereController extends Controller
     {
         $today = now()->toDateString();
 
-        $affectations = AffectationListe::with(['site', 'employes' => function($query) {
-            $query->with(['presences' => function($q) {
-                $q->whereDate('date', now()->toDateString());
-            }]);
-        }])
+        $affectations = AffectationListe::with([
+            'site',
+            'employes' => function ($query) {
+                $query->select('employes.id', 'nom', 'prenom')
+                      ->withPivot('date_debut_reelle', 'date_fin_reelle')
+                      ->with(['presences']);
+            }
+        ])
         ->whereDate('date_debut', '<=', $today)
         ->whereDate('date_fin', '>=', $today)
         ->get();
 
         $data = $affectations->map(function ($aff) {
+            // Range général de l’affectation
+            $rangeAffectation = $this->generateDateRange($aff->date_debut, $aff->date_fin);
+
             return [
                 'id' => $aff->id,
                 'site' => $aff->site,
                 'date_debut' => $aff->date_debut,
                 'date_fin' => $aff->date_fin,
-                'dates' => $this->generateDateRange($aff->date_debut, $aff->date_fin),
-                'employes' => $aff->employes,
+                'dates' => $rangeAffectation,
+                'employes' => $aff->employes->map(function ($emp) {
+                    // Range propre à cet employé
+                    $datesEmp = $this->generateDateRange($emp->pivot->date_debut_reelle, $emp->pivot->date_fin_reelle);
+                    return [
+                        'id' => $emp->id,
+                        'nom' => $emp->nom,
+                        'prenom' => $emp->prenom,
+                        'pivot' => $emp->pivot,
+                        'presences' => $emp->presences,
+                        'dates' => $datesEmp
+                    ];
+                })
             ];
         });
 
@@ -45,8 +63,8 @@ class PresenceJournaliereController extends Controller
     private function generateDateRange($start, $end)
     {
         $dates = [];
-        $current = \Carbon\Carbon::parse($start);
-        $end = \Carbon\Carbon::parse($end);
+        $current = Carbon::parse($start);
+        $end = Carbon::parse($end);
         while ($current->lte($end)) {
             $dates[] = $current->format('Y-m-d');
             $current->addDay();
@@ -67,7 +85,7 @@ class PresenceJournaliereController extends Controller
         foreach ($presences as $affectationId => $dates) {
             foreach ($dates as $date => $employes) {
                 foreach ($employes as $employeId => $present) {
-                    PresenceJournaliere::firstOrCreate(
+                    PresenceJournaliere::updateOrCreate(
                         [
                             'affectation_liste_id' => $affectationId,
                             'employe_id' => $employeId,
