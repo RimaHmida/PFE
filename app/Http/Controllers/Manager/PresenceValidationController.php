@@ -18,8 +18,7 @@ class PresenceValidationController extends Controller
         $today = Carbon::now()->toDateString();
 
         $affectations = AffectationListe::with(['site', 'employes.presences'])
-            ->whereDate('date_fin', '<', $today)
-            ->where('validated_by_manager', false)
+            ->whereDate('date_fin', '<=', $today)
             ->get();
 
         return response()->json([
@@ -35,6 +34,14 @@ class PresenceValidationController extends Controller
         }
 
         $affectation = AffectationListe::findOrFail($id);
+
+        if ($affectation->validated_by_manager) {
+            return response()->json([
+                'status'  => 'info',
+                'message' => 'Cette affectation est déjà validée.'
+            ], 200);
+        }
+
         $affectation->validated_by_manager = true;
         $affectation->validated_at = now();
         $affectation->save();

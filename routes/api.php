@@ -78,4 +78,6 @@ Route::prefix('secretaire')->middleware('auth:api')->group(function () {
 Route::prefix('manager')->middleware('auth:api')->group(function () {
     Route::get('presences', [PresenceValidationController::class, 'index']);
     Route::post('presences/validate', [PresenceValidationController::class, 'validateAll']);
+    Route::post('presences/validate/{id}', [PresenceValidationController::class, 'validateAffectation']);
+
 });
