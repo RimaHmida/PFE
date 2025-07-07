@@ -36,8 +36,13 @@ class UserController extends Controller
             'nom'      => 'required|string|max:255',
             'prenom'   => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'role'     => 'required|in:administrateur_it,administrateur,manager,secretaire,agent paie',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/' ],            
+            'role'     => 'required|in:administrateur_it,administrateur,manager,secretaire,agent_paie',
         ]);
 
         $user = User::create([
@@ -63,7 +68,7 @@ class UserController extends Controller
             'nom'      => 'required|string|max:255',
             'prenom'   => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email,' . $user->id,
-            'role'     => 'required|in:administrateur_it,administrateur,manager,secretaire,agent paie',
+            'role'     => 'required|in:administrateur_it,administrateur,manager,secretaire,agent_paie',
         ]);
 
         $user->nom    = $validated['nom'];

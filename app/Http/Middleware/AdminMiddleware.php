@@ -10,15 +10,10 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-
-        dd('Middleware is working');
-
         if (auth()->check() && auth()->user()->role === 'administrateur') {
             return $next($request);
         }
 
         abort(403, 'Accès refusé');
     }
-
 }
-
