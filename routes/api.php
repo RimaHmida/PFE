@@ -12,6 +12,8 @@ use App\Http\Controllers\Paie\ValidationPaieController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\ProfileController;
+
 // AUTH
 Route::post('login', [AuthController::class, 'login']);
 Route::middleware('auth:api')->group(function () {

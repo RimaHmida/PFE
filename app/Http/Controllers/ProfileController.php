@@ -13,7 +13,10 @@ class ProfileController extends Controller
     public function me()
     {
         $user = Auth::user();
-        $user->photo_url = $user->photo_url;
+
+        $user->profile_image_url = $user->profile_image
+            ? asset('storage/app/private/public/images/profiles/' . $user->profile_image)
+            : 'https://ui-avatars.com/api/?name=' . urlencode($user->prenom . ' ' . $user->nom);
 
         return response()->json([
             'status' => 'success',
@@ -43,19 +46,24 @@ class ProfileController extends Controller
 
         // ✅ Si une nouvelle photo est fournie
         if ($request->hasFile('photo')) {
-            // Supprimer l’ancienne si elle existe
-            if ($user->photo && Storage::exists('public/images/profiles/' . $user->photo)) {
-                Storage::delete('public/images/profiles/' . $user->photo);
+            if ($user->profile_image && Storage::disk('public')->exists('images/profiles/' . $user->profile_image)) {
+                Storage::disk('public')->delete('images/profiles/' . $user->profile_image);
             }
 
             $file = $request->file('photo');
             $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('public/images/profiles', $filename);
 
-            $user->photo = $filename;
+            // ✅ Sauvegarde dans storage/app/public/images/profiles/
+            Storage::disk('public')->putFileAs('images/profiles', $file, $filename);
+
+            $user->profile_image = $filename;
         }
 
         $user->save();
+
+        $user->profile_image_url = $user->profile_image
+            ? asset('storage/images/profiles/' . $user->profile_image)
+            : 'https://ui-avatars.com/api/?name=' . urlencode($user->prenom . ' ' . $user->nom);
 
         return response()->json([
             'status' => 'success',
