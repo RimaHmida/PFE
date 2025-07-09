@@ -35,7 +35,6 @@ Route::prefix('admin')->middleware('auth:api')->group(function () {
     Route::post('users', [UserController::class, 'store']); // création des comptes
     Route::put('users/{user}', [UserController::class, 'update']);
     Route::delete('users/{user}', [UserController::class, 'destroy']);
-
     Route::apiResource('employes', EmployeController::class);
     Route::apiResource('sites', SiteController::class);
 
