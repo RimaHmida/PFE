@@ -10,13 +10,21 @@ use App\Http\Controllers\Secretaire\PresenceJournaliereController;
 use App\Http\Controllers\Manager\PresenceValidationController;
 use App\Http\Controllers\Paie\ValidationPaieController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 // AUTH
 Route::post('login', [AuthController::class, 'login']);
 Route::middleware('auth:api')->group(function () {
     Route::get('me', [AuthController::class, 'me']);
     Route::post('logout', [AuthController::class, 'logout']);
+Route::post('change-password', [AuthController::class, 'changePassword']);
+Route::get('/profile', [ProfileController::class, 'me']);
+Route::post('/profile/update', [ProfileController::class, 'update']);
 });
+
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [ResetPasswordController::class, 'reset']);
+
 
 // ADMIN
 Route::prefix('admin')->middleware('auth:api')->group(function () {

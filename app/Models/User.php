@@ -11,7 +11,13 @@ class User extends Authenticatable implements JWTSubject
     use Notifiable;
 
     protected $fillable = [
-        'nom', 'prenom', 'email', 'password', 'role',
+        'nom',
+        'prenom',
+        'email',
+        'password',
+        'role',
+        'profile_image', 
+        'password_changed_at',
     ];
 
     protected $hidden = [
@@ -20,24 +26,24 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     protected $casts = [
-        'role' => 'string',
+        'password_changed_at' => 'datetime',
     ];
 
-    /**
-     * Retourne l'identifiant unique qui sera stocké dans le token JWT.
-     *
-     * @return mixed
-     */
+    protected $appends = ['profile_image_url']; // ✅ correspond à l'accessor ci-dessous
+
+    // ✅ Génère une URL de profil (avatar par défaut si vide)
+    public function getProfileImageUrlAttribute()
+    {
+        return $this->profile_image
+            ? asset('storage/images/profiles/' . $this->profile_image)
+            : 'https://ui-avatars.com/api/?name=' . urlencode($this->prenom . ' ' . $this->nom);
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    /**
-     * Retourne un tableau de claims personnalisés à ajouter dans le token JWT.
-     *
-     * @return array
-     */
     public function getJWTCustomClaims()
     {
         return [];
