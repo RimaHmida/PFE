@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http;
-
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 
 class Kernel extends HttpKernel
@@ -31,12 +31,14 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'admin' => \App\Http\Middleware\AdminMiddleware::class,
-        'is_admin' => \App\Http\Middleware\AdminMiddleware::class,
+
             ];
 
             protected $commands = [
                 \App\Console\Commands\ResetRecuperationStatus::class,
+                \App\Console\Commands\GenerateStatusTrainingData::class,
+                \App\Console\Commands\ExportTrainingDataset::class,
+
             ];
             protected function schedule(Schedule $schedule)
     {

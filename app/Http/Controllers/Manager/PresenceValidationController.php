@@ -9,8 +9,18 @@ use Carbon\Carbon;
 
 class PresenceValidationController extends Controller
 {
+    protected function authorizeValidationAccess(): void
+{
+    $user = auth()->user();
+    if (!$user || !in_array($user->role, ['manager', 'administrateur_it'])) {
+        abort(403, 'Accès réservé aux managers et administrateurs IT.');
+    }
+}
+
     public function index()
     {
+        $this->authorizeValidationAccess(); // 🔐
+
         if (!in_array(Auth::user()->role, ['manager', 'administrateur_it'])) {
             abort(403, 'Accès refusé');
         }
@@ -29,6 +39,8 @@ class PresenceValidationController extends Controller
 
     public function validateAffectation($id)
     {
+        $this->authorizeValidationAccess(); // 🔐
+
         if (!in_array(Auth::user()->role, ['manager', 'administrateur_it'])) {
             abort(403, 'Accès refusé');
         }

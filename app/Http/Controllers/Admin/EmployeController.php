@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employe;
@@ -9,9 +10,12 @@ use Illuminate\Http\Request;
 
 
 class EmployeController extends Controller
-{
+{    use AuthorizesRequests;
+
     public function index()
     {
+        $this->authorize('viewAny', Employe::class); // ✅ vérifie le droit d'accès
+
         $employes = EmployeStatutService::getEmployesAvecRecup();
 
         return response()->json([
@@ -26,6 +30,8 @@ class EmployeController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Employe::class); // ✅ vérifie le droit d'ajouter
+
         $validated = $request->validate([
             'nom' => 'required|string|max:255',
             'prenom' => 'required|string|max:255',
@@ -46,6 +52,8 @@ class EmployeController extends Controller
 
     public function update(Request $request, Employe $employe)
     {
+        $this->authorize('update', $employe); // ✅ vérifie le droit de modifier
+
         $validated = $request->validate([
             'nom' => 'required|string|max:255',
             'prenom' => 'required|string|max:255',
@@ -66,6 +74,8 @@ class EmployeController extends Controller
 
     public function destroy(Employe $employe)
     {
+        $this->authorize('delete', $employe); // ✅ vérifie le droit de supprimer
+
         $employe->delete();
 
         return response()->json([

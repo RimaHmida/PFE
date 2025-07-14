@@ -10,8 +10,18 @@ use Illuminate\Support\Facades\Auth;
 
 class ValidationPaieController extends Controller
 {
+    protected function authorizePaieAccess(): void
+{
+    $user = auth()->user();
+    if (!$user || !in_array($user->role, ['administrateur_it', 'agent_paie'])) {
+        abort(403, 'Accès réservé aux administrateurs IT et aux agents paie.');
+    }
+}
+
     public function index()
     {
+        $this->authorizePaieAccess(); // 🔐
+
         $validatedAffectations = AffectationListe::with(['site', 'employes'])
             ->where('validated_by_manager', true)
             ->get()
@@ -48,6 +58,8 @@ class ValidationPaieController extends Controller
     }
     public function download($id)
     {
+        $this->authorizePaieAccess(); // 🔐
+
         $user = Auth::user();
         if (!in_array($user->role, ['administrateur_it', 'agent_paie'])) {
             abort(403, 'Accès refusé');

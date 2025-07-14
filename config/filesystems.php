@@ -38,6 +38,13 @@ return [
             'report' => false,
         ],
 
+
+        'dataset' => [
+            'driver' => 'local',
+            'root' => public_path('dataset'),
+            'visibility' => 'public',
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

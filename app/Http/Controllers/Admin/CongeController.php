@@ -10,14 +10,26 @@ use Illuminate\Support\Facades\Storage;
 
 class CongeController extends Controller
 {
+    protected function authorizeAdmin(): void
+{
+    $user = auth()->user();
+    if (!$user || !in_array($user->role, ['administrateur', 'administrateur_it'])) {
+        abort(403, 'Accès réservé aux administrateurs.');
+    }
+}
     public function index()
+    
     {
+        $this->authorizeAdmin();
+
         $conges = Conge::with('employe')->latest()->get();
         return response()->json(['data' => $conges]);
     }
 
     public function store(Request $request)
 {
+    $this->authorizeAdmin();
+
     $validated = $request->validate([
         'employe_id'   => 'required|exists:employes,id',
         'type'         => 'required|in:maladie,justifié,non justifié',
@@ -45,6 +57,8 @@ class CongeController extends Controller
 
     public function update(Request $request, $id)
     {
+        $this->authorizeAdmin();
+
         $conge = Conge::findOrFail($id);
     
         $validated = $request->validate([
@@ -80,6 +94,8 @@ class CongeController extends Controller
     
     public function destroy($id)
     {
+        $this->authorizeAdmin();
+
         $conge = Conge::findOrFail($id);
         if ($conge->document) Storage::disk('public')->delete($conge->document);
         $conge->delete();
@@ -89,6 +105,8 @@ class CongeController extends Controller
 
     public function download($id)
 {
+    $this->authorizeAdmin();
+
     $conge = Conge::findOrFail($id);
 
     if (!$conge->document || !Storage::disk('public')->exists($conge->document)) {

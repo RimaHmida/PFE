@@ -1,15 +1,19 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Controllers\Controller;
 use App\Models\Site;
 use Illuminate\Http\Request;
 
 class SiteController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
+        $this->authorize('viewAny', Site::class);
+
         $sites = Site::all();
         return response()->json([
             'status' => 'success',
@@ -19,6 +23,8 @@ class SiteController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Site::class);
+
         $validated = $request->validate([
             'nomsite'      => 'required|string|max:255',
             'localisation' => 'required|string|max:255',
@@ -36,6 +42,8 @@ class SiteController extends Controller
 
     public function update(Request $request, Site $site)
     {
+        $this->authorize('update', $site);
+
         $validated = $request->validate([
             'nomsite'      => 'required|string|max:255',
             'localisation' => 'required|string|max:255',
@@ -53,6 +61,8 @@ class SiteController extends Controller
 
     public function destroy(Site $site)
     {
+        $this->authorize('delete', $site);
+
         $site->delete();
 
         return response()->json([

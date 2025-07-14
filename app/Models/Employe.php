@@ -16,7 +16,7 @@ class Employe extends Model
         'numero',
         'fonction',
         'adresse',
-        'statut', // 'travail', 'récupération', 'congé'
+        'statut', 
         'jours_recuperation',
     ];
 

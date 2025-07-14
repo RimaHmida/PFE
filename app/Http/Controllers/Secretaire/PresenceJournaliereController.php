@@ -11,8 +11,18 @@ use Carbon\Carbon;
 
 class PresenceJournaliereController extends Controller
 {
+    protected function authorizePresenceAccess(): void
+{
+    $user = auth()->user();
+    if (!$user || !in_array($user->role, ['administrateur_it', 'secretaire', 'manager'])) {
+        abort(403, 'Accès réservé aux administrateurs IT, secrétaires ou managers.');
+    }
+}
+
     public function index()
     {
+        $this->authorizePresenceAccess(); // 🔐
+
         $today = now()->toDateString();
 
         $affectations = AffectationListe::with([
@@ -74,6 +84,8 @@ class PresenceJournaliereController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizePresenceAccess(); // 🔐
+
         $userId = Auth::id();
 
         if (!$userId) {

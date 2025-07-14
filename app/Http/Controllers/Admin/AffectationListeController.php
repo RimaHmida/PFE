@@ -15,8 +15,18 @@ use Carbon\Carbon;
 
 class AffectationListeController extends Controller
 {
+    private function authorizeOnlyAdmins(): void
+{
+    $user = Auth::user();
+
+    if (!in_array($user->role, ['administrateur_it', 'administrateur'])) {
+        abort(403, 'Accès réservé aux administrateurs.');
+    }
+}
     public function index(Request $request)
     {
+        $this->authorizeOnlyAdmins();
+
         EmployeStatutService::verifierEtMettreAJourStatuts();
 
         $listes = AffectationListe::with([
@@ -90,6 +100,8 @@ class AffectationListeController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeOnlyAdmins();
+
         $validated = $request->validate([
             'site_id' => 'required|exists:sites,id',
             'date_debut' => 'required|date',
@@ -137,6 +149,8 @@ class AffectationListeController extends Controller
 
     public function ajouterEmployeAffectation(Request $request, $affectationId)
     {
+        $this->authorizeOnlyAdmins();
+
         $validated = $request->validate([
             'employe_id' => 'required|exists:employes,id',
             'date_debut_reelle' => 'required|date',
@@ -171,6 +185,8 @@ class AffectationListeController extends Controller
 
     public function updatePivot(Request $request, $pivotId)
     {
+        $this->authorizeOnlyAdmins();
+
         $validated = $request->validate([
             'date_debut_reelle' => 'required|date',
             'date_fin_reelle' => 'required|date|after_or_equal:date_debut_reelle',
@@ -183,12 +199,16 @@ class AffectationListeController extends Controller
 
     public function supprimerEmploye($pivotId)
     {
+        $this->authorizeOnlyAdmins();
+
         DB::table('affectation_liste_employe')->where('id', $pivotId)->delete();
         return response()->json(['status' => 'success', 'message' => 'Employé supprimé']);
     }
 
     public function destroy($id)
     {
+        $this->authorizeOnlyAdmins();
+
         $affectation = AffectationListe::findOrFail($id);
         $affectation->employes()->detach();
         $affectation->delete();

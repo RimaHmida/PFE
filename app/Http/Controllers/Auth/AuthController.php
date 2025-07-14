@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Auth;
-
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,36 +12,82 @@ use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\User;
 use App\Mail\PasswordChangedNotification;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     // ✅ Connexion
     public function login(Request $request)
-    {
-        // Validation des identifiants
-        $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required'
-        ]);
+{
+    $credentials = $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required'
+    ]);
 
-        // Tente de créer un token avec les credentials fournis
-        if (!$token = JWTAuth::attempt($credentials)) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Identifiants invalides'
-            ], 401);
-        }
+    $key = 'login:' . Str::lower($request->email) . '|' . $request->ip();
 
-        // Récupère l'utilisateur connecté
-        $user = Auth::user();
+    // ✅ Check if a lockout exists
+    if (Cache::has($key . ':locked')) {
+        $retryAfter = Cache::get($key . ':locked') - time();
 
         return response()->json([
-            'status'  => 'success',
-            'message' => 'Authentification réussie.',
-            'user'    => $user,
-            'token'   => $token
-        ], 200);
+            'status' => 'error',
+            'message' => 'Trop de tentatives. Réessayez dans ' . max($retryAfter, 0) . ' secondes.'
+        ], 429);
     }
+
+    // ✅ Increment attempts
+    $attempts = Cache::increment($key);
+
+    // ✅ First time → set expiration for counter
+    if ($attempts === 1) {
+        Cache::put($key, 1, 120); // expire after 2 mins
+    }
+
+    // ✅ If too many failed attempts → lock for 60s
+    if ($attempts >= 5) {
+        Cache::put($key . ':locked', time() + 60, 60); // lock key for 60s
+        Cache::forget($key); // reset the counter
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Trop de tentatives. Réessayez dans 60 secondes.'
+        ], 429);
+    }
+
+    $user = User::where('email', $credentials['email'])->first();
+
+    if (!$user) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Vous n\'avez pas de compte ? Contactez votre administrateur IT.'
+        ], 401);
+    }
+
+    if (!Auth::attempt($credentials)) {
+        Log::warning('❌ Échec de connexion - Mauvais mot de passe', ['email' => $credentials['email'], 'ip' => $request->ip()]);
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Identifiants invalides'
+        ], 401);
+    }
+
+    // ✅ Login successful → clear lock
+    Cache::forget($key);
+    Cache::forget($key . ':locked');
+
+    $token = JWTAuth::fromUser(Auth::user());
+    Log::info('✅ Connexion réussie', ['user_id' => Auth::id(), 'ip' => $request->ip()]);
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Authentification réussie.',
+        'user' => Auth::user()->only(['id', 'nom', 'prenom', 'email', 'role']),
+        'token' => $token
+    ], 200);
+}
+
     // ✅ Enregistrement
     public function register(Request $request)
     {
@@ -91,7 +137,7 @@ class AuthController extends Controller
     {
         return response()->json([
             'status' => 'success',
-            'user' => Auth::user(),
+            'user' => Auth::user()->only(['id', 'nom', 'prenom', 'email', 'role']),
         ]);
     }
 
