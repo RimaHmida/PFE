@@ -112,7 +112,7 @@ class AuthController extends Controller
     return response()->json([
         'status' => 'success',
         'message' => 'Authentification réussie.',
-        'user' => Auth::user()->only(['id', 'nom', 'prenom', 'email', 'role']),
+        'user' => Auth::user(),
         'token' => $token
     ], 200);
  
