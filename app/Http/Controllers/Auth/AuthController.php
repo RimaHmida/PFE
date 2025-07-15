@@ -15,6 +15,7 @@ use App\Mail\PasswordChangedNotification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Models\LoginLog;
 
 class AuthController extends Controller
 {
@@ -59,6 +60,14 @@ class AuthController extends Controller
     $user = User::where('email', $credentials['email'])->first();
 
     if (!$user) {
+         //logs
+        LoginLog::create([
+            'user_id'    => null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status'     => 'failed',
+            'message'    => 'Utilisateur inexistant',
+        ]);
         return response()->json([
             'status' => 'error',
             'message' => 'Vous n\'avez pas de compte ? Contactez votre administrateur IT.'
@@ -66,6 +75,14 @@ class AuthController extends Controller
     }
 
     if (!Auth::attempt($credentials)) {
+        //logs
+        LoginLog::create([
+            'user_id'    => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status'     => 'failed',
+            'message'    => 'Mot de passe incorrect',
+        ]);
         Log::warning('❌ Échec de connexion - Mauvais mot de passe', ['email' => $credentials['email'], 'ip' => $request->ip()]);
         return response()->json([
             'status' => 'error',
@@ -80,13 +97,22 @@ class AuthController extends Controller
     $token = JWTAuth::fromUser(Auth::user());
     Log::info('✅ Connexion réussie', ['user_id' => Auth::id(), 'ip' => $request->ip()]);
 
+
+    //logs
+    LoginLog::create([
+        'user_id'    => $user->id,
+        'ip_address' => $request->ip(),
+        'user_agent' => $request->userAgent(),
+    ]);
     return response()->json([
         'status' => 'success',
         'message' => 'Authentification réussie.',
         'user' => Auth::user()->only(['id', 'nom', 'prenom', 'email', 'role']),
         'token' => $token
     ], 200);
+ 
 }
+
 
     // ✅ Enregistrement
     public function register(Request $request)

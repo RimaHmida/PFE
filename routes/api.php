@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\LoginLogController;
 
 // AUTH
 Route::post('login', [AuthController::class, 'login']);
@@ -71,3 +72,7 @@ Route::prefix('paie')->middleware('auth:api')->group(function () {
     Route::get('validations', [ValidationPaieController::class, 'index']);
     Route::get('validations/{id}/download', [ValidationPaieController::class, 'download']);
 });
+Route::middleware(['auth:api'])->get('/admin/login-logs', [LoginLogController::class, 'index']);
+
+
+
