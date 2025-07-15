@@ -58,16 +58,17 @@ class AuthController extends Controller
     }
 
     $user = User::where('email', $credentials['email'])->first();
-
+//logs
     if (!$user) {
-         //logs
         LoginLog::create([
             'user_id'    => null,
+            'email'      => $credentials['email'], // ✅ NEW
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'status'     => 'failed',
             'message'    => 'Utilisateur inexistant',
         ]);
+    
         return response()->json([
             'status' => 'error',
             'message' => 'Vous n\'avez pas de compte ? Contactez votre administrateur IT.'
@@ -77,11 +78,12 @@ class AuthController extends Controller
     if (!Auth::attempt($credentials)) {
         //logs
         LoginLog::create([
-            'user_id'    => $user->id,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'status'     => 'failed',
-            'message'    => 'Mot de passe incorrect',
+            'user_id' => null, 
+        'email'      => $user->email, // ← ✅ Ajoute bien ici aussi
+        'ip_address' => $request->ip(),
+        'user_agent' => $request->userAgent(),
+        'status'     => 'failed',
+        'message'    => 'Mot de passe incorrect',
         ]);
         Log::warning('❌ Échec de connexion - Mauvais mot de passe', ['email' => $credentials['email'], 'ip' => $request->ip()]);
         return response()->json([
@@ -101,8 +103,11 @@ class AuthController extends Controller
     //logs
     LoginLog::create([
         'user_id'    => $user->id,
+        'email'      => $user->email, // ← ✅ ici aussi
         'ip_address' => $request->ip(),
         'user_agent' => $request->userAgent(),
+        'status'     => 'success',
+        'message'    => null,
     ]);
     return response()->json([
         'status' => 'success',

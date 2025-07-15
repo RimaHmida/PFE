@@ -14,9 +14,11 @@ class LoginLogController extends Controller
         if (Auth::user()->role !== 'administrateur_it') {
             abort(403, 'Accès réservé à l’administrateur IT.');
         }
-
-        $logs = LoginLog::with('user')->latest()->paginate(20);
-        return response()->json($logs);
+       
+            $logs = LoginLog::with('user')->latest()->get();
+        
+            return response()->json(['data' => $logs]);
+       
     }
 }
 
