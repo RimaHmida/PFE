@@ -57,48 +57,46 @@ class ValidationPaieController extends Controller
         return response()->json(['data' => $validatedAffectations]);
     }
     public function download($id)
-    {
-        $this->authorizePaieAccess(); // 🔐
+{
+    $this->authorizePaieAccess(); // 🔐
 
-        $user = Auth::user();
-        if (!in_array($user->role, ['administrateur_it', 'agent_paie'])) {
-            abort(403, 'Accès refusé');
-        }
-    
-        $affectation = AffectationListe::with(['site', 'employes'])->findOrFail($id);
-        $period = $this->generateDateRange($affectation->date_debut, $affectation->date_fin);
-    
-        $html = '<h2>Feuille de présence</h2>';
-        $html .= '<p><strong>Site :</strong> ' . ($affectation->site->nomsite ?? 'N/A') . '</p>';
-        $html .= '<p><strong>Période :</strong> ' . $affectation->date_debut . ' → ' . $affectation->date_fin . '</p>';
-        $html .= '<p><strong>Validée le :</strong> ' . ($affectation->validated_at ?? 'Non validée') . '</p>';
-        $html .= '<table border="1" cellpadding="5" cellspacing="0" width="100%"><thead><tr><th>Employé</th><th>Date</th><th>État</th></tr></thead><tbody>';
-    
-        foreach ($affectation->employes as $emp) {
-            foreach ($period as $date) {
-                $presence = $emp->presences()
-                    ->where('affectation_liste_id', $affectation->id)
-                    ->where('date', $date)
-                    ->first();
-    
-                $etat = $presence ? ($presence->present ? 'Présent' : 'Absent') : 'Non marqué';
-                $html .= '<tr><td>' . $emp->nom . ' ' . $emp->prenom . '</td><td>' . $date . '</td><td>' . $etat . '</td></tr>';
-            }
-        }
-    
-        $html .= '</tbody></table>';
-    
-        $pdf = Pdf::loadHtml($html);
-    
-        // Construire un nom de fichier clair avec les dates
-        $filename = "presence_{$affectation->date_debut}_au_{$affectation->date_fin}.pdf";
-    
-        // Retourner le PDF directement pour téléchargement
-        return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
-        }, $filename);
+    $user = Auth::user();
+    if (!in_array($user->role, ['administrateur_it', 'agent_paie'])) {
+        abort(403, 'Accès refusé');
     }
+
+    $affectation = AffectationListe::with(['site', 'employes'])->findOrFail($id);
+    $period = $this->generateDateRange($affectation->date_debut, $affectation->date_fin);
+
+    $html = '<h2>Feuille de présence</h2>';
+    $html .= '<p><strong>Site :</strong> ' . ($affectation->site->nomsite ?? 'N/A') . '</p>';
+    $html .= '<p><strong>Période :</strong> ' . $affectation->date_debut . ' → ' . $affectation->date_fin . '</p>';
+    $html .= '<p><strong>Validée le :</strong> ' . ($affectation->validated_at ?? 'Non validée') . '</p>';
+    $html .= '<table border="1" cellpadding="5" cellspacing="0" width="100%"><thead><tr><th>Employé</th><th>Date</th><th>État</th></tr></thead><tbody>';
+
+    foreach ($affectation->employes as $emp) {
+        foreach ($period as $date) {
+            $presence = $emp->presences()
+                ->where('affectation_liste_id', $affectation->id)
+                ->where('date', $date)
+                ->first();
+
+            $etat = $presence ? ($presence->present ? 'Présent' : 'Absent') : 'Non marqué';
+            $html .= '<tr><td>' . $emp->nom . ' ' . $emp->prenom . '</td><td>' . $date . '</td><td>' . $etat . '</td></tr>';
+        }
+    }
+
+    $html .= '</tbody></table>';
+
+    $pdf = Pdf::loadHtml($html);
+    $site = preg_replace('/[^A-Za-z0-9_-]/', '_', $affectation->site->nomsite ?? 'Site');
+    $filename = "{$site}_Periode_{$affectation->date_debut}_{$affectation->date_fin}.pdf";
     
+    return response($pdf->output(), 200)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+}
+
     private function generateDateRange($start, $end)
     {
         $dates = [];

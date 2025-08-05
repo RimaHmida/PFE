@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\LoginLogController;
+use App\Http\Controllers\Admin\AdminDashboardController; 
 
 // AUTH
 Route::post('login', [AuthController::class, 'login']);
@@ -32,12 +33,15 @@ Route::post('/reset-password', [ResetPasswordController::class, 'reset']);
 // ADMIN
 Route::prefix('admin')->middleware('auth:api')->group(function () {
     Route::get('dashboard-data', [DashboardController::class, 'adminData']);
+    Route::get('dashboard-stats', [AdminDashboardController::class, 'getStats']);
+
     Route::get('users', [UserController::class, 'index']);
     Route::post('users', [UserController::class, 'store']); // création des comptes
     Route::put('users/{user}', [UserController::class, 'update']);
     Route::delete('users/{user}', [UserController::class, 'destroy']);
     Route::apiResource('employes', EmployeController::class);
     Route::apiResource('sites', SiteController::class);
+    Route::post('sites/upload-image', [SiteController::class, 'uploadImage']);
 
     Route::apiResource('affectation_listes', AffectationListeController::class)->except(['show', 'edit', 'update']);
     Route::post('affectation_listes/{id}/employes', [AffectationListeController::class, 'ajouterEmployeAffectation']);
@@ -45,6 +49,7 @@ Route::prefix('admin')->middleware('auth:api')->group(function () {
     Route::prefix('affectation_liste_employe')->group(function () {
         Route::put('{pivotId}', [AffectationListeController::class, 'updatePivot']);
         Route::delete('{pivotId}', [AffectationListeController::class, 'supprimerEmploye']);
+
     });
 
     Route::post('conges', [CongeController::class, 'store']);
@@ -52,6 +57,7 @@ Route::prefix('admin')->middleware('auth:api')->group(function () {
     Route::put('conges/{id}', [CongeController::class, 'update']);
     Route::delete('conges/{id}', [CongeController::class, 'destroy']);
     Route::get('conges/download/{id}', [CongeController::class, 'download']);
+
 });
 
 // SECRETAIRE

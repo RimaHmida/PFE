@@ -25,7 +25,7 @@ class ForgotPasswordController extends Controller
             ]
         );
 
-        $resetUrl = 'http://localhost:3000/#/reset-password?token=' . $token;
+        $resetUrl = 'http://localhost:3000/reset-password?token=' . $token;
 
         Mail::raw("Voici votre lien de réinitialisation : $resetUrl", function ($message) use ($request) {
             $message->to($request->email)->subject('Réinitialisation du mot de passe');

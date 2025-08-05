@@ -22,20 +22,22 @@ class PresenceJournaliereController extends Controller
     public function index()
     {
         $this->authorizePresenceAccess(); // 🔐
-
         $today = now()->toDateString();
 
         $affectations = AffectationListe::with([
             'site',
-            'employes' => function ($query) {
+            'employes' => function ($query) use ($today) {
                 $query->select('employes.id', 'nom', 'prenom')
                       ->withPivot('date_debut_reelle', 'date_fin_reelle')
+                      ->wherePivot('date_debut_reelle', '<=', $today)
+                      ->wherePivot('date_fin_reelle', '>=', $today)
                       ->with(['presences']);
             }
         ])
         ->whereDate('date_debut', '<=', $today)
         ->whereDate('date_fin', '>=', $today)
         ->get();
+        
 
         $data = $affectations->map(function ($aff) {
             // Range général de l’affectation
@@ -84,7 +86,7 @@ class PresenceJournaliereController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizePresenceAccess(); // 🔐
+            $this->authorizePresenceAccess(); // 🔐
 
         $userId = Auth::id();
 

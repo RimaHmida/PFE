@@ -18,6 +18,7 @@ class Employe extends Model
         'adresse',
         'statut', 
         'jours_recuperation',
+        'jours_recuperation_restants',
     ];
 
     /**
@@ -27,7 +28,10 @@ class Employe extends Model
     {
         return $this->hasMany(PresenceJournaliere::class);
     }
-
+    public function presencesJournaliere()
+    {
+        return $this->hasMany(PresenceJournaliere::class);
+    }
     /**
      * Les affectations de l'employé
      * Pivot : id, dates réelles, employé de remplacement

@@ -7,7 +7,8 @@ use App\Models\Conge;
 use App\Models\Employe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Facades\File;
+use Symfony\Component\HttpFoundation\Response;
 class CongeController extends Controller
 {
     protected function authorizeAdmin(): void
@@ -32,7 +33,7 @@ class CongeController extends Controller
 
     $validated = $request->validate([
         'employe_id'   => 'required|exists:employes,id',
-        'type'         => 'required|in:maladie,justifié,non justifié',
+        'type'         => 'required|in:maladie,justifié',
         'date_debut'   => 'required|date',
         'date_fin'     => 'required|date|after_or_equal:date_debut',
         'description'  => 'nullable|string',
@@ -63,7 +64,7 @@ class CongeController extends Controller
     
         $validated = $request->validate([
             'employe_id'   => 'required|exists:employes,id',
-            'type'         => 'required|in:maladie,justifié,non justifié',
+            'type'         => 'required|in:maladie,justifié,',
             'date_debut'   => 'required|date',
             'date_fin'     => 'required|date|after_or_equal:date_debut',
             'description'  => 'nullable|string',
@@ -85,12 +86,16 @@ class CongeController extends Controller
             // Keep existing document
             $validated['document'] = $conge->document;
         }
+
+
     
         $conge->update($validated);
         EmployeStatutService::verifierEtMettreAJourStatuts();
     
         return response()->json(['message' => '✅ Congé modifié avec succès']);
     }
+    
+
     
     public function destroy($id)
     {
@@ -102,21 +107,25 @@ class CongeController extends Controller
 
         return response()->json(['message' => '✅ Congé supprimé avec succès']);
     }
-
     public function download($id)
 {
-    $this->authorizeAdmin();
-
-    $conge = Conge::findOrFail($id);
+    $conge = Conge::with('employe')->findOrFail($id);
 
     if (!$conge->document || !Storage::disk('public')->exists($conge->document)) {
-        return abort(404);
+        return response()->json(['message' => 'Document introuvable'], 404);
     }
 
-    $path = storage_path('app/public/' . $conge->document);
-    return response()->file($path, [
-        'Content-Disposition' => 'attachment; filename="' . basename($conge->document) . '"'
-    ]);
+    $path = storage_path("app/public/" . $conge->document);
+    $extension = pathinfo($path, PATHINFO_EXTENSION);
+
+    // ✅ Nom du fichier avec nom, prénom, et date début
+    $filename = "justificatif_{$conge->employe->nom}_{$conge->employe->prenom}_{$conge->date_debut}." . $extension;
+
+    return response()->streamDownload(function () use ($path) {
+        readfile($path); // lit le fichier depuis le disque
+    }, $filename);
 }
+
+
 
 }

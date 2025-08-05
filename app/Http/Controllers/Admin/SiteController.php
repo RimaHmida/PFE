@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Controllers\Controller;
 use App\Models\Site;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SiteController extends Controller
 {
@@ -29,6 +31,7 @@ class SiteController extends Controller
             'nomsite'      => 'required|string|max:255',
             'localisation' => 'required|string|max:255',
             'client'       => 'required|string|max:255',
+            'image_url'    => 'nullable|string|max:255',
         ]);
 
         $site = Site::create($validated);
@@ -48,6 +51,7 @@ class SiteController extends Controller
             'nomsite'      => 'required|string|max:255',
             'localisation' => 'required|string|max:255',
             'client'       => 'required|string|max:255',
+            'image_url'    => 'nullable|string|max:255',
         ]);
 
         $site->update($validated);
@@ -69,5 +73,27 @@ class SiteController extends Controller
             'status'  => 'success',
             'message' => 'Site supprimé avec succès.'
         ], 200);
+    }
+
+    // New method to handle image upload
+    public function uploadImage(Request $request)
+    {
+        $this->authorize('create', Site::class);
+
+        $request->validate([
+            'image' => 'required|image|max:2048', // max 2MB
+        ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('sites', 'public');
+            $url = Storage::url($path); // e.g. /storage/sites/filename.jpg
+
+            return response()->json([
+                'status' => 'success',
+                'image_url' => $url,
+            ], 200);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'No image uploaded'], 400);
     }
 }
