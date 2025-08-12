@@ -15,6 +15,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\LoginLogController;
 use App\Http\Controllers\Admin\AdminDashboardController; 
+use App\Http\Controllers\Admin\AnomalyScoreController;
 
 // AUTH
 Route::post('login', [AuthController::class, 'login']);
@@ -29,11 +30,12 @@ Route::post('/profile/update', [ProfileController::class, 'update']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [ResetPasswordController::class, 'reset']);
 
-
 // ADMIN
 Route::prefix('admin')->middleware('auth:api')->group(function () {
     Route::get('dashboard-data', [DashboardController::class, 'adminData']);
     Route::get('dashboard-stats', [AdminDashboardController::class, 'getStats']);
+    Route::post('anomaly-scores/refresh', [AnomalyScoreController::class, 'refresh']);
+    Route::get('anomaly-scores', [AnomalyScoreController::class, 'index']);
 
     Route::get('users', [UserController::class, 'index']);
     Route::post('users', [UserController::class, 'store']); // création des comptes
